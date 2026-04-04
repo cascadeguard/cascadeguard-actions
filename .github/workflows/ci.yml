@@ -1,7 +1,7 @@
 # CascadeGuard Actions — CI Workflow
 #
 # Runs on every PR and push to main. Validates workflow files with
-# actionlint and runs the Python action tests.
+# actionlint, YAML hygiene with yamllint, and runs the Python action tests.
 
 name: CI
 
@@ -36,6 +36,11 @@ jobs:
       - name: Run actionlint
         run: actionlint -color
 
+      - name: Run yamllint
+        run: |
+          pip install --quiet yamllint
+          yamllint scan-report/action.yml scan-issues/action.yml
+
   test:
     name: Python tests
     runs-on: ubuntu-latest
@@ -49,10 +54,13 @@ jobs:
           python-version: "3.12"
           cache: "pip"
 
-      - name: Install dependencies
+      - name: Install CascadeGuard CLI
         run: |
-          pip install -e ".[test]"
-          pip install "git+https://github.com/cascadeguard/cascadeguard.git@2b18823097397bc8fa7ad81f8e9917253358ed99#subdirectory=app"
+          pip install --quiet \
+            "git+https://github.com/cascadeguard/cascadeguard.git@3371e21993926db2e3979974cda2cc08fec18022#subdirectory=app"
+
+      - name: Install test dependencies
+        run: pip install --quiet -e ".[test]"
 
       - name: Run tests
         run: pytest tests/ -v
