@@ -1,0 +1,86 @@
+name: 'CascadeGuard Scan Report'
+description: 'Parse Grype/Trivy scan results and generate vulnerability reports'
+author: 'CascadeGuard'
+
+inputs:
+  grype-results:
+    description: 'Path to Grype JSON results file'
+    required: false
+  trivy-results:
+    description: 'Path to Trivy JSON results file'
+    required: false
+  image:
+    description: 'Image name (e.g. alpine, python-3.12-slim)'
+    required: true
+  output-dir:
+    description: 'Directory to write vulnerability-report.json and .md'
+    required: true
+  cascadeguard-version:
+    description: 'CascadeGuard CLI version (git ref) to install'
+    required: false
+    default: 'main'
+
+outputs:
+  report-json:
+    description: 'Path to the generated JSON report'
+    value: ${{ steps.report.outputs.report-json }}
+  report-md:
+    description: 'Path to the generated Markdown report'
+    value: ${{ steps.report.outputs.report-md }}
+  total-cves:
+    description: 'Total number of CVEs found'
+    value: ${{ steps.report.outputs.total-cves }}
+  critical-count:
+    description: 'Number of critical CVEs'
+    value: ${{ steps.report.outputs.critical-count }}
+  high-count:
+    description: 'Number of high CVEs'
+    value: ${{ steps.report.outputs.high-count }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install CascadeGuard CLI
+      shell: bash
+      run: |
+        pip install --quiet \
+          "git+https://github.com/cascadeguard/cascadeguard.git@${{ inputs.cascadeguard-version }}#subdirectory=app"
+
+    - name: Generate vulnerability report
+      id: report
+      shell: bash
+      run: |
+        ARGS=()
+        if [ -n "${{ inputs.grype-results }}" ] && [ -f "${{ inputs.grype-results }}" ]; then
+          ARGS+=(--grype "${{ inputs.grype-results }}")
+        fi
+        if [ -n "${{ inputs.trivy-results }}" ] && [ -f "${{ inputs.trivy-results }}" ]; then
+          ARGS+=(--trivy "${{ inputs.trivy-results }}")
+        fi
+
+        if [ ${#ARGS[@]} -eq 0 ]; then
+          echo "::error::At least one of grype-results or trivy-results must be provided"
+          exit 1
+        fi
+
+        mkdir -p "${{ inputs.output-dir }}"
+
+        cascadeguard scan-report \
+          "${ARGS[@]}" \
+          --image "${{ inputs.image }}" \
+          --dir "${{ inputs.output-dir }}"
+
+        REPORT_JSON="${{ inputs.output-dir }}/vulnerability-report.json"
+        REPORT_MD="${{ inputs.output-dir }}/vulnerability-report.md"
+
+        echo "report-json=$REPORT_JSON" >> "$GITHUB_OUTPUT"
+        echo "report-md=$REPORT_MD" >> "$GITHUB_OUTPUT"
+
+        if [ -f "$REPORT_JSON" ]; then
+          TOTAL=$(node -e "var r=JSON.parse(require('fs').readFileSync('$REPORT_JSON','utf8')); console.log(r.summary.total)")
+          CRITICAL=$(node -e "var r=JSON.parse(require('fs').readFileSync('$REPORT_JSON','utf8')); console.log(r.summary.critical)")
+          HIGH=$(node -e "var r=JSON.parse(require('fs').readFileSync('$REPORT_JSON','utf8')); console.log(r.summary.high)")
+          echo "total-cves=$TOTAL" >> "$GITHUB_OUTPUT"
+          echo "critical-count=$CRITICAL" >> "$GITHUB_OUTPUT"
+          echo "high-count=$HIGH" >> "$GITHUB_OUTPUT"
+        fi
