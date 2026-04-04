@@ -1,0 +1,52 @@
+{
+  "matches": [
+    {
+      "vulnerability": {
+        "id": "CVE-2026-1001",
+        "severity": "Critical",
+        "description": "Buffer overflow in libssl",
+        "dataSource": "https://nvd.nist.gov/vuln/detail/CVE-2026-1001",
+        "fix": {
+          "versions": [{"version": "3.0.15"}]
+        }
+      },
+      "artifact": {
+        "name": "libssl3",
+        "version": "3.0.14",
+        "type": "deb"
+      }
+    },
+    {
+      "vulnerability": {
+        "id": "CVE-2026-1002",
+        "severity": "High",
+        "description": "Use-after-free in curl",
+        "dataSource": "https://nvd.nist.gov/vuln/detail/CVE-2026-1002",
+        "fix": {
+          "versions": []
+        }
+      },
+      "artifact": {
+        "name": "curl",
+        "version": "7.88.1",
+        "type": "deb"
+      }
+    },
+    {
+      "vulnerability": {
+        "id": "CVE-2026-1003",
+        "severity": "Medium",
+        "description": "Path traversal in tar",
+        "dataSource": "https://nvd.nist.gov/vuln/detail/CVE-2026-1003",
+        "fix": {
+          "versions": [{"version": "1.35"}]
+        }
+      },
+      "artifact": {
+        "name": "tar",
+        "version": "1.34",
+        "type": "deb"
+      }
+    }
+  ]
+}
