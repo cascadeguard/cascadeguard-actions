@@ -1,0 +1,83 @@
+name: 'Setup Grype'
+description: 'Install Anchore Grype vulnerability scanner at a pinned version'
+author: 'CascadeGuard'
+branding:
+  icon: 'shield'
+  color: 'red'
+
+inputs:
+  version:
+    description: 'Grype version to install (e.g. v0.110.0). Defaults to latest stable.'
+    required: false
+    default: 'latest'
+  install-dir:
+    description: 'Directory to install the grype binary into.'
+    required: false
+    default: '/usr/local/bin'
+  verify-checksum:
+    description: 'Verify the downloaded binary checksum using cosign. Requires cosign to be installed.'
+    required: false
+    default: 'false'
+
+outputs:
+  version:
+    description: 'The installed Grype version string (e.g. v0.110.0).'
+    value: ${{ steps.install.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install Grype
+      id: install
+      shell: bash
+      env:
+        GRYPE_VERSION: ${{ inputs.version }}
+        INSTALL_DIR: ${{ inputs.install-dir }}
+      run: |
+        set -euo pipefail
+
+        if [[ "$GRYPE_VERSION" == "latest" ]]; then
+          RESOLVED=$(curl -sSfL \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/anchore/grype/releases/latest \
+            | grep '"tag_name"' | head -1 | sed 's/.*"tag_name": *"\([^"]*\)".*/\1/')
+          echo "Resolved latest Grype version: ${RESOLVED}"
+          GRYPE_VERSION="${RESOLVED}"
+        fi
+
+        echo "Installing Grype ${GRYPE_VERSION} to ${INSTALL_DIR}..."
+        curl -sSfL \
+          "https://raw.githubusercontent.com/anchore/grype/${GRYPE_VERSION}/install.sh" \
+          | sh -s -- -b "${INSTALL_DIR}" "${GRYPE_VERSION}"
+
+        INSTALLED=$(grype version --output json 2>/dev/null | grep '"version"' | head -1 \
+          | sed 's/.*"version": *"\([^"]*\)".*/\1/' || grype version 2>&1 | head -1)
+        echo "Installed Grype: ${INSTALLED}"
+        echo "version=${GRYPE_VERSION}" >> "$GITHUB_OUTPUT"
+
+    - name: Verify Grype checksum with cosign
+      if: inputs.verify-checksum == 'true'
+      shell: bash
+      env:
+        GRYPE_VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+
+        # Grype releases are signed with cosign keyless via Sigstore.
+        # Checksums file and its cosign bundle are published alongside each release.
+        BASE_URL="https://github.com/anchore/grype/releases/download/${GRYPE_VERSION}"
+        CHECKSUMS_FILE="grype_${GRYPE_VERSION#v}_checksums.txt"
+
+        curl -sSfL "${BASE_URL}/${CHECKSUMS_FILE}" -o "/tmp/${CHECKSUMS_FILE}"
+        curl -sSfL "${BASE_URL}/${CHECKSUMS_FILE}.pem" -o "/tmp/${CHECKSUMS_FILE}.pem"
+        curl -sSfL "${BASE_URL}/${CHECKSUMS_FILE}.sig" -o "/tmp/${CHECKSUMS_FILE}.sig"
+
+        cosign verify-blob \
+          --certificate "/tmp/${CHECKSUMS_FILE}.pem" \
+          --signature "/tmp/${CHECKSUMS_FILE}.sig" \
+          --certificate-identity-regexp "https://github.com/anchore/grype/.*" \
+          --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+          "/tmp/${CHECKSUMS_FILE}"
+
+        echo "::notice::Grype ${GRYPE_VERSION} checksums verified via cosign."
+        rm -f "/tmp/${CHECKSUMS_FILE}" "/tmp/${CHECKSUMS_FILE}.pem" "/tmp/${CHECKSUMS_FILE}.sig"
