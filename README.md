@@ -3,6 +3,7 @@
 Reusable composite GitHub Actions for CascadeGuard security workflows.
 
 [![CI](https://github.com/cascadeguard/cascadeguard-actions/actions/workflows/ci.yml/badge.svg)](https://github.com/cascadeguard/cascadeguard-actions/actions/workflows/ci.yml)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/cascadeguard/cascadeguard-actions/badge)](https://securityscorecards.dev/viewer/?uri=github.com/cascadeguard/cascadeguard-actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 > **Security-first:** Pin all action references to a full commit SHA for reproducible, auditable pipelines.
@@ -64,6 +65,32 @@ uses: cascadeguard/cascadeguard-actions/setup-grype@v1
 ```
 
 After each tagged release, floating major-version tags (e.g. `v1`) are updated so you can opt in to automatic patch/minor updates.
+
+## Supply Chain Security
+
+This repository practices what it preaches.
+
+| Control | Status |
+|---------|--------|
+| All action dependencies pinned to full SHA | ✅ |
+| Dependabot for weekly SHA/pip updates | ✅ |
+| `actionlint` validates all workflows in CI | ✅ |
+| SBOM generated on every release (SPDX + CycloneDX) | ✅ |
+| SBOMs signed with [Sigstore](https://sigstore.dev) keyless cosign | ✅ |
+| GitHub artifact attestations (SLSA provenance) | ✅ |
+| OpenSSF Scorecard analysis (weekly) | ✅ |
+
+SBOM files and cosign bundles are attached to every [GitHub Release](https://github.com/cascadeguard/cascadeguard-actions/releases).
+
+To verify an SBOM signature:
+
+```bash
+cosign verify-blob \
+  --bundle sbom.spdx.json.bundle \
+  --certificate-identity-regexp "https://github.com/cascadeguard/cascadeguard-actions/.*" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+  sbom.spdx.json
+```
 
 ## Contributing
 
