@@ -52,7 +52,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -e ".[test]"
-          pip install "git+https://github.com/cascadeguard/cascadeguard.git@CAS-81/scan-cli-subcommands#subdirectory=app"
+          pip install "git+https://github.com/cascadeguard/cascadeguard.git@2b18823097397bc8fa7ad81f8e9917253358ed99#subdirectory=app"
 
       - name: Run tests
         run: pytest tests/ -v
