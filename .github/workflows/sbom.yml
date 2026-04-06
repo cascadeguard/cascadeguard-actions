@@ -1,0 +1,91 @@
+# CascadeGuard Actions — SBOM & Supply Chain Signing Workflow
+#
+# Triggered when a GitHub Release is published. Generates SBOMs in
+# SPDX and CycloneDX formats using our own setup-syft action (dogfooding),
+# then uploads them as release assets and signs them with Sigstore/cosign
+# using keyless OIDC signing.
+#
+# Required permissions:
+#   contents: write       — attach assets to the release
+#   id-token: write       — OIDC token for cosign keyless signing
+#   attestations: write   — GitHub artifact attestations
+
+name: SBOM & Supply Chain Signing
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  sbom:
+    name: Generate SBOM and sign
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      # Dogfood: install Syft using our own setup-syft action
+      - name: Setup Syft (via cascadeguard-actions/setup-syft)
+        uses: ./setup-syft
+        id: syft
+        with:
+          version: "latest"
+
+      - name: Generate SPDX SBOM
+        run: |
+          syft . \
+            --output spdx-json=sbom.spdx.json \
+            --source-name "cascadeguard-actions" \
+            --source-version "${{ github.event.release.tag_name }}"
+
+      - name: Generate CycloneDX SBOM
+        run: |
+          syft . \
+            --output cyclonedx-json=sbom.cdx.json \
+            --source-name "cascadeguard-actions" \
+            --source-version "${{ github.event.release.tag_name }}"
+
+      # Install cosign for keyless Sigstore signing
+      - name: Install cosign
+        uses: sigstore/cosign-installer@dc72c7d5c4d10cd6bcb8cf6e3fd625a9e5e537da # v3.7.0
+
+      - name: Sign SBOM files with cosign (keyless / OIDC)
+        run: |
+          cosign sign-blob \
+            --yes \
+            --bundle sbom.spdx.json.bundle \
+            sbom.spdx.json
+
+          cosign sign-blob \
+            --yes \
+            --bundle sbom.cdx.json.bundle \
+            sbom.cdx.json
+
+      # Attach SBOMs + bundles to the GitHub Release
+      - name: Upload SBOM assets to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          gh release upload "$TAG" \
+            sbom.spdx.json \
+            sbom.spdx.json.bundle \
+            sbom.cdx.json \
+            sbom.cdx.json.bundle \
+            --clobber
+
+      # GitHub-native artifact attestation (SLSA provenance via Sigstore)
+      - name: Generate GitHub artifact attestation for SBOMs
+        uses: actions/attest-build-provenance@1c608d11d69870c2092266b3f9a6f3abbf17002c # v1.4.3
+        with:
+          subject-path: |
+            sbom.spdx.json
+            sbom.cdx.json
