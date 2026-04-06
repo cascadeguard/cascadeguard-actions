@@ -1,0 +1,59 @@
+# CascadeGuard Actions — Release Workflow
+#
+# Triggered on semver tag push (v*). Creates a GitHub Release with
+# auto-generated changelog and updates the floating major-version tag
+# (e.g. v1 -> latest patch) so consumers can reference @v1.
+#
+# Usage:
+#   git tag v1.0.0
+#   git push origin v1.0.0
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+
+      - name: Validate tag is semver
+        id: version
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Tag $TAG is not a valid semver tag (expected vMAJOR.MINOR.PATCH)"
+            exit 1
+          fi
+          MAJOR="${TAG%%.*}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "major=$MAJOR" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.version.outputs.tag }}" \
+            --generate-notes \
+            --title "${{ steps.version.outputs.tag }}" \
+            --verify-tag
+
+      - name: Update floating major-version tag
+        run: |
+          MAJOR="${{ steps.version.outputs.major }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -fa "$MAJOR" -m "Update $MAJOR to ${{ steps.version.outputs.tag }}"
+          git push origin "$MAJOR" --force
