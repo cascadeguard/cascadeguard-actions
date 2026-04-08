@@ -65,7 +65,7 @@ runs:
 
         mkdir -p "${{ inputs.output-dir }}"
 
-        cascadeguard scan-report \
+        cascadeguard vuln report \
           "${ARGS[@]}" \
           --image "${{ inputs.image }}" \
           --dir "${{ inputs.output-dir }}"
