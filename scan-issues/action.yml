@@ -70,7 +70,7 @@ runs:
           TAG_ARG="--tag ${{ inputs.tag }}"
         fi
 
-        OUTPUT=$(cascadeguard scan-issues \
+        OUTPUT=$(cascadeguard vuln issues \
           "${ARGS[@]}" \
           --image "${{ inputs.image }}" \
           $TAG_ARG \
