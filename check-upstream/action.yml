@@ -1,0 +1,77 @@
+name: 'CascadeGuard Check Upstream'
+description: 'Query Docker Hub for new upstream tags across enrolled images'
+author: 'CascadeGuard'
+
+inputs:
+  images-yaml:
+    description: 'Path to images.yaml (default: images.yaml)'
+    required: false
+    default: 'images.yaml'
+  image:
+    description: 'Scope check to a single image name as listed in images.yaml'
+    required: false
+    default: ''
+  format:
+    description: 'Output format: table (default) or json'
+    required: false
+    default: 'table'
+  cascadeguard-version:
+    description: 'CascadeGuard CLI version (git ref) to install'
+    required: false
+    default: 'main'
+
+outputs:
+  has-new-tags:
+    description: "'true' if any enrolled images have new upstream tags, 'false' otherwise"
+    value: ${{ steps.check.outputs.has-new-tags }}
+  findings-json:
+    description: 'JSON array of findings: [{image, new_tags}]'
+    value: ${{ steps.check.outputs.findings-json }}
+  findings-count:
+    description: 'Number of images with new upstream tags'
+    value: ${{ steps.check.outputs.findings-count }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install CascadeGuard CLI
+      shell: bash
+      run: |
+        pip install --quiet \
+          "git+https://github.com/cascadeguard/cascadeguard.git@${{ inputs.cascadeguard-version }}#subdirectory=app"
+
+    - name: Check upstream tags
+      id: check
+      shell: bash
+      run: |
+        ARGS=()
+        if [ -n "${{ inputs.images-yaml }}" ]; then
+          ARGS+=(--images-yaml "${{ inputs.images-yaml }}")
+        fi
+        if [ -n "${{ inputs.image }}" ]; then
+          ARGS+=(--image "${{ inputs.image }}")
+        fi
+
+        # Always capture JSON output for structured outputs
+        FINDINGS=$(cascadeguard images check-upstream \
+          "${ARGS[@]}" \
+          --format json 2>/dev/null || true)
+
+        # Also emit human-readable output when table format is requested
+        if [ "${{ inputs.format }}" = "table" ]; then
+          cascadeguard images check-upstream "${ARGS[@]}" --format table || true
+        else
+          echo "$FINDINGS"
+        fi
+
+        COUNT=$(echo "$FINDINGS" | python3 -c "import sys,json; data=json.load(sys.stdin); print(len(data))" 2>/dev/null || echo "0")
+        HAS_NEW="false"
+        if [ "$COUNT" -gt 0 ]; then
+          HAS_NEW="true"
+        fi
+
+        echo "has-new-tags=$HAS_NEW" >> "$GITHUB_OUTPUT"
+        echo "findings-count=$COUNT" >> "$GITHUB_OUTPUT"
+        # Write findings JSON as a single line for the output
+        FINDINGS_ONELINE=$(echo "$FINDINGS" | tr -d '\n')
+        echo "findings-json=$FINDINGS_ONELINE" >> "$GITHUB_OUTPUT"
