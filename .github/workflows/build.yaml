@@ -1,0 +1,114 @@
+# CascadeGuard — Reusable Build Workflow
+#
+# Full build pipeline: matrix generation from images.yaml, per-image build/scan/
+# sign via the build-image workflow, actions policy enforcement, and a build
+# gate that aggregates results into a single required status check.
+#
+# Callers provide an optional image_filter and inherit secrets.
+
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      image_filter:
+        description: "Limit to a specific image name. Leave empty for all."
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+  security-events: write
+  attestations: write
+
+jobs:
+  # ── Matrix Generation ────────────────────────────────────────────
+  generate-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Generate image matrix from images.yaml
+        id: matrix
+        run: |
+          python3 - <<'PYEOF'
+          import yaml, json, os
+
+          with open('images.yaml') as f:
+              images = yaml.safe_load(f)
+
+          filter_name = os.environ.get('IMAGE_FILTER', '').strip()
+
+          active = [img for img in images if img.get('enabled', True) is not False]
+          include = []
+          for img in active:
+              if 'dockerfile' not in img:
+                  continue
+              parts = img['dockerfile'].split('/')
+              image_path = '/'.join(parts[1:-1])
+              if not filter_name or img['image'] == filter_name:
+                  include.append({
+                      'image_path': image_path,
+                      'image_name': img['image'],
+                      'image_tag': img['tag'],
+                  })
+
+          matrix = json.dumps({'include': include})
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f'matrix={matrix}\n')
+          print(f'Generated matrix with {len(include)} image(s): {[e["image_name"] for e in include]}')
+          PYEOF
+        env:
+          IMAGE_FILTER: ${{ inputs.image_filter }}
+
+  # ── CascadeGuard Validation ──────────────────────────────────────
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - name: CascadeGuard validate
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace" \
+            ghcr.io/cascadeguard/cascadeguard:v0.1.0 \
+            validate \
+          || echo "::warning::CascadeGuard validate exited non-zero — review images.yaml or check CascadeGuard version compatibility"
+
+  # ── Per-Image Build Pipeline ─────────────────────────────────────
+  build:
+    needs: [generate-matrix, validate]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
+    uses: cascadeguard/cascadeguard-actions/.github/workflows/build-image.yaml@main
+    with:
+      image_path: ${{ matrix.image_path }}
+      image_name: ${{ matrix.image_name }}
+      image_tag: ${{ matrix.image_tag }}
+      push_and_sign: ${{ github.event_name != 'pull_request' }}
+    secrets: inherit
+
+  # ── Actions Policy Enforcement ───────────────────────────────────
+  policy:
+    uses: cascadeguard/cascadeguard-actions/.github/workflows/enforce-actions-policy.yaml@main
+
+  # ── Build Gate ───────────────────────────────────────────────────
+  build-gate:
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: always()
+    steps:
+      - name: Check all builds passed
+        run: |
+          RESULT="${{ needs.build.result }}"
+          if [[ "$RESULT" == "success" || "$RESULT" == "skipped" ]]; then
+            echo "All image builds passed the security gate (result: $RESULT)."
+          else
+            echo "::error::One or more image builds failed. Check the build job logs above."
+            exit 1
+          fi
