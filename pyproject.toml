@@ -6,7 +6,7 @@ requires-python = ">=3.11"
 
 [project.optional-dependencies]
 test = [
-    "pytest>=7.0",
+    "pytest>=9.0.3",
     # Install the cascadeguard CLI from the scan-subcommands branch:
     # pip install "git+https://github.com/cascadeguard/cascadeguard.git@CAS-81/scan-cli-subcommands#subdirectory=app"
     # (handled by CI workflow; conftest.py resolves the workspace path for local dev)
