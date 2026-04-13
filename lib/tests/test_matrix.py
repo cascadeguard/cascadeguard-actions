@@ -143,9 +143,9 @@ class TestBuildMatrixOutputShape:
     def test_image_path_derived_correctly(self):
         result = generate_build_matrix(IMAGES)
         by_name = {e["image_name"]: e for e in result["include"]}
-        assert by_name["nginx"]["image_path"] == "nginx"
-        assert by_name["python"]["image_path"] == "python/3.12"
-        assert by_name["alpine"]["image_path"] == "alpine"
+        assert by_name["nginx"]["image_path"] == "images/nginx"
+        assert by_name["python"]["image_path"] == "images/python/3.12"
+        assert by_name["alpine"]["image_path"] == "images/alpine"
 
     def test_tag_is_string(self):
         images = [{"name": "x", "image": "x", "tag": 3.20,

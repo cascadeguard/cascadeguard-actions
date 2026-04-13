@@ -10,12 +10,13 @@ from typing import List, Optional
 
 
 def derive_image_path(dockerfile: str) -> str:
-    """Extract the path between the first and last segments.
+    """Extract the directory containing the Dockerfile.
 
-    Example: "images/python/3.12/Dockerfile" -> "python/3.12"
+    Example: "images/python/3.12/Dockerfile" -> "images/python/3.12"
+             "local/seed/Dockerfile"          -> "local/seed"
     """
     parts = dockerfile.split("/")
-    return "/".join(parts[1:-1])
+    return "/".join(parts[:-1])
 
 
 def _active_images(images_data: list[dict]) -> list[dict]:
