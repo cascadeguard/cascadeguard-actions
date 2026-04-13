@@ -59,7 +59,7 @@ runs:
       run: |
         python3 - <<'PYEOF'
         import yaml, json, os
-        from matrix import generate_matrix
+        from matrix import generate_build_matrix
 
         images_file = os.environ.get("IMAGES_FILE", "images.yaml")
         with open(images_file) as f:
@@ -69,7 +69,7 @@ runs:
         changed_raw = os.environ.get("CHANGED_FILES", "").strip()
         changed_files = changed_raw.splitlines() if changed_raw else None
 
-        result = generate_matrix(images, filter_name, changed_files)
+        result = generate_build_matrix(images, filter_name, changed_files)
 
         matrix_json = json.dumps({"include": result["include"]})
         has_images = "true" if result["has_images"] else "false"
