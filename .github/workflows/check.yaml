@@ -1,15 +1,14 @@
 # CascadeGuard — Reusable Check Workflow
 #
 # Runs cascadeguard images check against enrolled images.
-# Checks registries for digest drift, detects new upstream tags,
-# evaluates quarantine rules, and promotes base images that have
-# passed quarantine by pinning Dockerfiles to the new digest and
-# opening a PR (one per base image, dependabot-style).
+# The CLI handles all git operations: committing state files and
+# opening PRs for Dockerfile promotions. This workflow just calls
+# the CLI and reports the result.
 #
-# Promote and PR creation are on by default (matching the CLI).
-# Pass promote: false or create-pr: false to disable.
-#
-# Replaces the separate scheduled-scan and check-upstream-tags workflows.
+# Behaviour is controlled by .cascadeguard.yaml in the calling repo:
+#   check.state.destination: main | pr
+#   check.promote.enabled: true | false
+#   check.promote.destination: pr | main
 
 name: Check
 
@@ -31,16 +30,11 @@ on:
         type: string
         required: false
         default: "table"
-      promote:
-        description: "Update Dockerfiles for base images past quarantine (default: true)"
+      no-promote:
+        description: "Skip Dockerfile promotion regardless of config"
         type: boolean
         required: false
-        default: true
-      create-pr:
-        description: "Open a PR with promoted Dockerfile changes (default: true)"
-        type: boolean
-        required: false
-        default: true
+        default: false
 
 permissions:
   contents: write
@@ -74,12 +68,8 @@ jobs:
           if [ -n "${{ inputs.image }}" ]; then
             ARGS+=(--image "${{ inputs.image }}")
           fi
-          # Only pass --no-* flags when explicitly disabled by caller
-          if [ "${{ inputs.promote }}" = "false" ]; then
+          if [ "${{ inputs.no-promote }}" = "true" ]; then
             ARGS+=(--no-promote)
-          fi
-          if [ "${{ inputs.create-pr }}" = "false" ]; then
-            ARGS+=(--no-create-pr)
           fi
 
           set +e
@@ -91,26 +81,6 @@ jobs:
             echo "has-drift=true" >> "$GITHUB_OUTPUT"
           else
             echo "has-drift=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Commit state changes
-        run: |
-          git config user.name "cascadeguard[bot]"
-          git config user.email "cascadeguard[bot]@users.noreply.github.com"
-
-          # Stage any state file changes
-          git add .cascadeguard/ || true
-
-          if git diff --cached --quiet; then
-            echo "No state changes to commit."
-          else
-            SCAN_DATE=$(date -u +%Y-%m-%d)
-            git commit -m "chore(state): update image state ${SCAN_DATE}
-
-          Automated check run. State files updated for drift detection.
-
-          Co-Authored-By: Paperclip <noreply@paperclip.ing>"
-            git push origin main
           fi
 
       - name: Summary
