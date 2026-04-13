@@ -2,9 +2,11 @@
 Testable matrix generation logic for CI/CD workflows.
 
 Provides functions to generate GitHub Actions matrix JSON from
-parsed images.yaml data. Shared by scheduled-scan and release
+parsed images.yaml data. Shared by build, scheduled-scan, and release
 matrix generation jobs.
 """
+
+from typing import List, Optional
 
 
 def derive_image_path(dockerfile: str) -> str:
@@ -95,3 +97,63 @@ def generate_release_matrix(images_data: list[dict]) -> list[dict]:
         }
         for img in active
     ]
+
+
+def generate_build_matrix(
+    images_data: list,
+    image_filter: str = "",
+    changed_files: Optional[List[str]] = None,
+) -> dict:
+    """Generate a build matrix, optionally filtered by changed files.
+
+    When *changed_files* is provided, only images whose Dockerfile
+    directory was touched are included — unless ``shared/``,
+    ``images.yaml``, or ``.github/workflows/`` changed, in which case
+    all images are rebuilt.
+
+    Args:
+        images_data: Parsed images.yaml list.
+        image_filter: If non-empty, only include images matching this name.
+        changed_files: List of changed file paths from the push.
+            ``None`` or empty means rebuild all.
+
+    Returns:
+        ``{"include": [...], "has_images": True/False}``
+    """
+    changed = [f for f in (changed_files or []) if f.strip()]
+
+    rebuild_all = (
+        not changed
+        or any(f.startswith("shared/") for f in changed)
+        or any(f == "images.yaml" for f in changed)
+        or any(f.startswith(".github/workflows/") for f in changed)
+    )
+
+    active = _active_images(images_data)
+    include = []
+
+    for img in active:
+        dockerfile = img.get("dockerfile")
+        if not dockerfile:
+            continue
+
+        image_path = derive_image_path(dockerfile)
+        image_dir = "/".join(dockerfile.split("/")[:-1])
+
+        if image_filter and img.get("image") != image_filter:
+            continue
+
+        if not rebuild_all:
+            if not any(f.startswith(image_dir + "/") for f in changed):
+                continue
+
+        include.append({
+            "image_path": image_path,
+            "image_name": img["image"],
+            "image_tag": str(img["tag"]),
+        })
+
+    return {
+        "include": include,
+        "has_images": len(include) > 0,
+    }
