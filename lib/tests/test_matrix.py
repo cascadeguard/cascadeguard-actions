@@ -157,3 +157,49 @@ class TestBuildMatrixOutputShape:
         images = [{"name": "x", "image": "x", "tag": "latest"}]
         result = generate_build_matrix(images)
         assert result["has_images"] is False
+
+
+class TestSourceDockerfile:
+    """Dockerfile resolved from source.dockerfile."""
+
+    def test_source_dockerfile_used(self):
+        images = [{"name": "x", "image": "x", "tag": "latest",
+                   "source": {"dockerfile": "images/x/Dockerfile"}}]
+        result = generate_build_matrix(images)
+        assert result["has_images"] is True
+        assert result["include"][0]["image_path"] == "x"
+
+    def test_root_dockerfile_fallback(self):
+        images = [{"name": "x", "image": "x", "tag": "latest",
+                   "dockerfile": "images/x/Dockerfile"}]
+        result = generate_build_matrix(images)
+        assert result["has_images"] is True
+
+    def test_source_dockerfile_takes_precedence(self):
+        images = [{"name": "x", "image": "x", "tag": "latest",
+                   "dockerfile": "images/old/Dockerfile",
+                   "source": {"dockerfile": "images/new/Dockerfile"}}]
+        result = generate_build_matrix(images)
+        assert result["include"][0]["image_path"] == "new"
+
+
+class TestBuildEnabledFalse:
+    """Images with build.enabled: false are excluded."""
+
+    def test_build_disabled_excluded(self):
+        images = [
+            {"name": "x", "image": "x", "tag": "latest",
+             "source": {"dockerfile": "images/x/Dockerfile"}},
+            {"name": "y", "image": "y", "tag": "latest",
+             "build": {"enabled": False}},
+        ]
+        result = generate_build_matrix(images)
+        assert len(result["include"]) == 1
+        assert result["include"][0]["image_name"] == "x"
+
+    def test_build_enabled_true_included(self):
+        images = [{"name": "x", "image": "x", "tag": "latest",
+                   "build": {"enabled": True},
+                   "source": {"dockerfile": "images/x/Dockerfile"}}]
+        result = generate_build_matrix(images)
+        assert result["has_images"] is True
