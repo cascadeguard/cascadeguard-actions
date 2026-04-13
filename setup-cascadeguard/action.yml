@@ -7,9 +7,9 @@ branding:
 
 inputs:
   version:
-    description: 'CascadeGuard version — a git ref (branch, tag, SHA) for source install, or "latest" for the newest release.'
+    description: 'CascadeGuard version — a git ref (branch, tag, SHA).'
     required: false
-    default: 'main'
+    default: '4f50b52b938d3882b4a6eae1dcd38507d8a82ee7'  # cascadeguard/cascadeguard@main
   python-version:
     description: 'Python version to use.'
     required: false
