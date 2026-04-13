@@ -39,7 +39,7 @@ runs:
         INPUT_IMAGE_NAME: ${{ inputs.image-name }}
         INPUT_IMAGE_TAG: ${{ inputs.image-tag }}
         INPUT_IMAGES_FILE: ${{ inputs.images-file }}
-        PYTHONPATH: ${{ github.action_path }}
+        PYTHONPATH: ${{ github.action_path }}/../lib
       run: |
         python3 - <<'PYEOF'
         import yaml, os, sys

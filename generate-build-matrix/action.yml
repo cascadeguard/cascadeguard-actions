@@ -1,0 +1,87 @@
+name: 'Generate Build Matrix'
+description: >
+  Generate a GitHub Actions matrix from images.yaml, optionally filtered
+  to only images whose files changed in the current push. Changes to
+  shared/, images.yaml, or workflows trigger a full rebuild.
+author: 'CascadeGuard'
+branding:
+  icon: 'grid'
+  color: 'blue'
+
+inputs:
+  image-filter:
+    description: 'Limit to a specific image name. Leave empty for all.'
+    required: false
+    default: ''
+  images-file:
+    description: 'Path to the images manifest file.'
+    required: false
+    default: 'images.yaml'
+  fetch-depth:
+    description: 'Git fetch depth for changed-file detection. Set to 0 to skip detection and build all.'
+    required: false
+    default: '2'
+
+outputs:
+  matrix:
+    description: 'JSON matrix object for use with strategy.matrix'
+    value: ${{ steps.matrix.outputs.matrix }}
+  has_images:
+    description: '"true" if the matrix contains at least one image'
+    value: ${{ steps.matrix.outputs.has_images }}
+
+runs:
+  using: composite
+  steps:
+    - name: Detect changed files
+      id: changes
+      shell: bash
+      run: |
+        if [ "${{ inputs.fetch-depth }}" = "0" ]; then
+          echo "files=" >> "$GITHUB_OUTPUT"
+        else
+          FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+          {
+            echo "files<<EOF"
+            echo "$FILES"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Generate matrix
+      id: matrix
+      shell: bash
+      env:
+        IMAGE_FILTER: ${{ inputs.image-filter }}
+        IMAGES_FILE: ${{ inputs.images-file }}
+        CHANGED_FILES: ${{ steps.changes.outputs.files }}
+        PYTHONPATH: ${{ github.action_path }}/../lib
+      run: |
+        python3 - <<'PYEOF'
+        import yaml, json, os
+        from matrix import generate_matrix
+
+        images_file = os.environ.get("IMAGES_FILE", "images.yaml")
+        with open(images_file) as f:
+            images = yaml.safe_load(f)
+
+        filter_name = os.environ.get("IMAGE_FILTER", "").strip()
+        changed_raw = os.environ.get("CHANGED_FILES", "").strip()
+        changed_files = changed_raw.splitlines() if changed_raw else None
+
+        result = generate_matrix(images, filter_name, changed_files)
+
+        matrix_json = json.dumps({"include": result["include"]})
+        has_images = "true" if result["has_images"] else "false"
+
+        with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+            f.write(f"matrix={matrix_json}\n")
+            f.write(f"has_images={has_images}\n")
+
+        total = len([i for i in images if i.get("enabled", True) is not False and "dockerfile" in i])
+        count = len(result["include"])
+        if not changed_files:
+            print(f"Rebuild all: {count}/{total} image(s)")
+        else:
+            print(f"Changed-file filter: {count}/{total} image(s): {[e['image_name'] for e in result['include']]}")
+        PYEOF

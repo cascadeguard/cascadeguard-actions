@@ -1,0 +1,42 @@
+name: 'Setup CascadeGuard'
+description: 'Install the CascadeGuard CLI from source or PyPI'
+author: 'CascadeGuard'
+branding:
+  icon: 'shield'
+  color: 'blue'
+
+inputs:
+  version:
+    description: 'CascadeGuard version — a git ref (branch, tag, SHA) for source install, or "latest" for the newest release.'
+    required: false
+    default: 'main'
+  python-version:
+    description: 'Python version to use.'
+    required: false
+    default: '3.12'
+
+outputs:
+  version:
+    description: 'The installed CascadeGuard version ref.'
+    value: ${{ steps.install.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install CascadeGuard CLI
+      id: install
+      shell: bash
+      env:
+        CG_VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        pip install --quiet \
+          "git+https://github.com/cascadeguard/cascadeguard.git@${CG_VERSION}#subdirectory=app"
+        echo "version=${CG_VERSION}" >> "$GITHUB_OUTPUT"
+        echo "Installed CascadeGuard CLI (ref: ${CG_VERSION})"
+        cascadeguard --help > /dev/null 2>&1 && echo "CLI verified." || echo "::warning::CLI not on PATH"

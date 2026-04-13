@@ -2,7 +2,12 @@
 #
 # Runs cascadeguard images check against enrolled images.
 # Checks registries for digest drift, detects new upstream tags,
-# updates state files, and commits changes.
+# evaluates quarantine rules, and promotes base images that have
+# passed quarantine by pinning Dockerfiles to the new digest and
+# opening a PR (one per base image, dependabot-style).
+#
+# Promote and PR creation are on by default (matching the CLI).
+# Pass promote: false or create-pr: false to disable.
 #
 # Replaces the separate scheduled-scan and check-upstream-tags workflows.
 
@@ -26,11 +31,22 @@ on:
         type: string
         required: false
         default: "table"
+      promote:
+        description: "Update Dockerfiles for base images past quarantine (default: true)"
+        type: boolean
+        required: false
+        default: true
+      create-pr:
+        description: "Open a PR with promoted Dockerfile changes (default: true)"
+        type: boolean
+        required: false
+        default: true
 
 permissions:
   contents: write
   packages: read
   issues: write
+  pull-requests: write
   security-events: write
 
 jobs:
@@ -44,22 +60,26 @@ jobs:
           ref: main
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Python
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+      - name: Set up CascadeGuard CLI
+        uses: cascadeguard/cascadeguard-actions/setup-cascadeguard@main
         with:
-          python-version: "3.12"
-
-      - name: Install CascadeGuard CLI
-        run: |
-          pip install --quiet \
-            "git+https://github.com/cascadeguard/cascadeguard.git@${{ inputs.cascadeguard-version }}#subdirectory=app"
+          version: ${{ inputs.cascadeguard-version }}
 
       - name: Run cascadeguard images check
         id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           ARGS=(--format "${{ inputs.format }}")
           if [ -n "${{ inputs.image }}" ]; then
             ARGS+=(--image "${{ inputs.image }}")
+          fi
+          # Only pass --no-* flags when explicitly disabled by caller
+          if [ "${{ inputs.promote }}" = "false" ]; then
+            ARGS+=(--no-promote)
+          fi
+          if [ "${{ inputs.create-pr }}" = "false" ]; then
+            ARGS+=(--no-create-pr)
           fi
 
           set +e
