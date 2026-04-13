@@ -23,6 +23,20 @@ def _active_images(images_data: list[dict]) -> list[dict]:
     return [img for img in images_data if img.get("enabled", True) is not False]
 
 
+def _resolve_dockerfile(img: dict) -> Optional[str]:
+    """Resolve the dockerfile path from source.dockerfile or legacy root field.
+
+    Returns None if no dockerfile is configured or build is disabled.
+    """
+    build_config = img.get("build", {})
+    if isinstance(build_config, dict) and build_config.get("enabled") is False:
+        return None
+    source = img.get("source", {})
+    if isinstance(source, dict):
+        return source.get("dockerfile") or img.get("dockerfile")
+    return img.get("dockerfile")
+
+
 def generate_scan_matrix(
     images_data: list[dict],
     image_filter: str = "",
@@ -133,7 +147,17 @@ def generate_build_matrix(
     include = []
 
     for img in active:
-        dockerfile = img.get("dockerfile")
+        # Skip images with build disabled
+        build_config = img.get("build", {})
+        if isinstance(build_config, dict) and build_config.get("enabled") is False:
+            continue
+
+        # Resolve dockerfile: source.dockerfile takes precedence
+        source = img.get("source", {})
+        if isinstance(source, dict):
+            dockerfile = source.get("dockerfile") or img.get("dockerfile")
+        else:
+            dockerfile = img.get("dockerfile")
         if not dockerfile:
             continue
 
