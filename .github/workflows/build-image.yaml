@@ -68,7 +68,7 @@ jobs:
           fi
 
       - name: Build image
-        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
         with:
           context: images/${{ inputs.image_path }}
           file: images/${{ inputs.image_path }}/Dockerfile
@@ -83,7 +83,7 @@ jobs:
 
       # ── Scanning ─────────────────────────────────────────────────
       - name: Install Grype
-        uses: cascadeguard/cascadeguard-actions/setup-grype@7e39ae312b916fb978e8b5f51aab113ae1aebca0 # CAS-94
+        uses: cascadeguard/cascadeguard-actions/setup-grype@d618b14ba0316b803ea98c1808d5b6392c97d5e1 # CAS-94
         with:
           version: v0.110.0
 
@@ -118,7 +118,7 @@ jobs:
 
       - name: Upload Trivy results artifact
         if: always()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: trivy-${{ inputs.image_name }}-${{ inputs.image_tag }}
           path: trivy-results.json
@@ -144,7 +144,7 @@ jobs:
 
       # ── SBOM Generation ──────────────────────────────────────────
       - name: Install Syft
-        uses: cascadeguard/cascadeguard-actions/setup-syft@7e39ae312b916fb978e8b5f51aab113ae1aebca0 # CAS-94
+        uses: cascadeguard/cascadeguard-actions/setup-syft@d618b14ba0316b803ea98c1808d5b6392c97d5e1 # CAS-94
         with:
           version: v1.42.3
 
@@ -155,7 +155,7 @@ jobs:
             --output cyclonedx-json=sbom.cyclonedx.json
 
       - name: Upload SBOM artifact
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: sbom-${{ inputs.image_name }}-${{ inputs.image_tag }}
           path: |
@@ -180,7 +180,7 @@ jobs:
       # ── Sign & Push ──────────────────────────────────────────────
       - name: Install Cosign
         if: inputs.push_and_sign
-        uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
+        uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
 
       - name: Push image
         id: push
@@ -209,7 +209,7 @@ jobs:
 
       - name: Generate SLSA provenance attestation
         if: inputs.push_and_sign
-        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
           subject-name: ${{ env.IMAGE_PREFIX }}/${{ inputs.image_name }}
           subject-digest: ${{ steps.push.outputs.digest }}
