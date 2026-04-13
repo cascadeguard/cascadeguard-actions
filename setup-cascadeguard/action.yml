@@ -35,7 +35,7 @@ runs:
         CG_VERSION: ${{ inputs.version }}
       run: |
         set -euo pipefail
-        pip install --quiet \
+        pip install --quiet --no-cache-dir \
           "git+https://github.com/cascadeguard/cascadeguard.git@${CG_VERSION}#subdirectory=app"
         echo "version=${CG_VERSION}" >> "$GITHUB_OUTPUT"
         echo "Installed CascadeGuard CLI (ref: ${CG_VERSION})"
