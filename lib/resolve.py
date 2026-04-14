@@ -7,12 +7,13 @@ the resolved path, name, tag, and whether it was found.
 
 
 def derive_image_path(dockerfile: str) -> str:
-    """Extract the path between 'images/' and '/Dockerfile'.
+    """Extract the directory containing the Dockerfile.
 
-    Example: "images/python/3.12/Dockerfile" -> "python/3.12"
+    Example: "images/python/3.12/Dockerfile" -> "images/python/3.12"
+             "local/seed/Dockerfile"          -> "local/seed"
     """
     parts = dockerfile.split("/")
-    return "/".join(parts[1:-1])
+    return "/".join(parts[:-1])
 
 
 def resolve_image(
@@ -34,7 +35,11 @@ def resolve_image(
         if not img.get("enabled", True):
             continue
         if img.get("image") == image_name:
-            image_path = derive_image_path(img["dockerfile"])
+            source = img.get("source", {})
+            dockerfile = source.get("dockerfile") or img.get("dockerfile") if isinstance(source, dict) else img.get("dockerfile")
+            if not dockerfile:
+                continue
+            image_path = derive_image_path(dockerfile)
             tag = image_tag_override if image_tag_override else img["tag"]
             return {
                 "image_path": image_path,
