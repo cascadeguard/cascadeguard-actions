@@ -9,7 +9,7 @@ inputs:
   version:
     description: 'CascadeGuard version — a git ref (branch, tag, SHA).'
     required: false
-    default: 'f64d1af1059189505008d920b5b9c860479fe77a'  # cascadeguard/cascadeguard@main
+    default: 'ebde5346348899b098810ee8c14aa2e1f82dd881'  # cascadeguard/cascadeguard@main
   python-version:
     description: 'Python version to use.'
     required: false
