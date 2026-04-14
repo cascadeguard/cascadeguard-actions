@@ -15,11 +15,6 @@ name: Check
 on:
   workflow_call:
     inputs:
-      cascadeguard-version:
-        description: "CascadeGuard CLI version (git ref or SHA)"
-        type: string
-        required: false
-        default: ""
       image:
         description: "Scope check to a single image name"
         type: string
@@ -56,8 +51,6 @@ jobs:
 
       - name: Set up CascadeGuard CLI
         uses: cascadeguard/cascadeguard-actions/setup-cascadeguard@main
-        with:
-          version: ${{ inputs.cascadeguard-version || '' }}
 
       - name: Run cascadeguard images check
         id: check
