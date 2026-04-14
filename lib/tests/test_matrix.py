@@ -143,9 +143,9 @@ class TestBuildMatrixOutputShape:
     def test_image_path_derived_correctly(self):
         result = generate_build_matrix(IMAGES)
         by_name = {e["image_name"]: e for e in result["include"]}
-        assert by_name["nginx"]["image_path"] == "nginx"
-        assert by_name["python"]["image_path"] == "python/3.12"
-        assert by_name["alpine"]["image_path"] == "alpine"
+        assert by_name["nginx"]["image_path"] == "images/nginx"
+        assert by_name["python"]["image_path"] == "images/python/3.12"
+        assert by_name["alpine"]["image_path"] == "images/alpine"
 
     def test_tag_is_string(self):
         images = [{"name": "x", "image": "x", "tag": 3.20,
@@ -167,7 +167,7 @@ class TestSourceDockerfile:
                    "source": {"dockerfile": "images/x/Dockerfile"}}]
         result = generate_build_matrix(images)
         assert result["has_images"] is True
-        assert result["include"][0]["image_path"] == "x"
+        assert result["include"][0]["image_path"] == "images/x"
 
     def test_root_dockerfile_fallback(self):
         images = [{"name": "x", "image": "x", "tag": "latest",
@@ -180,7 +180,7 @@ class TestSourceDockerfile:
                    "dockerfile": "images/old/Dockerfile",
                    "source": {"dockerfile": "images/new/Dockerfile"}}]
         result = generate_build_matrix(images)
-        assert result["include"][0]["image_path"] == "new"
+        assert result["include"][0]["image_path"] == "images/new"
 
 
 class TestBuildEnabledFalse:

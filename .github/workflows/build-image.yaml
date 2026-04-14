@@ -9,7 +9,7 @@ on:
   workflow_call:
     inputs:
       image_path:
-        description: "Path under images/ (e.g., python/3.12)"
+        description: "Directory containing the Dockerfile (e.g., images/python/3.12)"
         required: true
         type: string
       image_name:
@@ -64,14 +64,14 @@ jobs:
       - name: Copy shared hardening scripts into build context
         run: |
           if [ -d shared ]; then
-            cp -r shared images/${{ inputs.image_path }}/shared
+            cp -r shared ${{ inputs.image_path }}/shared
           fi
 
       - name: Build image
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
         with:
-          context: images/${{ inputs.image_path }}
-          file: images/${{ inputs.image_path }}/Dockerfile
+          context: ${{ inputs.image_path }}
+          file: ${{ inputs.image_path }}/Dockerfile
           push: false
           load: true
           tags: ${{ steps.meta.outputs.full_image }}
@@ -133,7 +133,7 @@ jobs:
 
       - name: Run container structure tests
         run: |
-          TEST_CONFIG="images/${{ inputs.image_path }}/test/structure.yaml"
+          TEST_CONFIG="${{ inputs.image_path }}/test/structure.yaml"
           if [ -f "$TEST_CONFIG" ]; then
             container-structure-test test \
               --image "${{ steps.meta.outputs.full_image }}" \
@@ -218,4 +218,4 @@ jobs:
       # ── Cleanup ──────────────────────────────────────────────────
       - name: Clean up build context
         if: always()
-        run: rm -rf images/${{ inputs.image_path }}/shared
+        run: rm -rf ${{ inputs.image_path }}/shared
