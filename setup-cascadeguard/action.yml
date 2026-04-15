@@ -1,5 +1,5 @@
 name: 'Setup CascadeGuard'
-description: 'Install the CascadeGuard CLI from source or PyPI'
+description: 'Install the CascadeGuard CLI. Version resolved from .cascadeguard.yaml, input override, or built-in default.'
 author: 'CascadeGuard'
 branding:
   icon: 'shield'
@@ -7,9 +7,9 @@ branding:
 
 inputs:
   version:
-    description: 'CascadeGuard version — a git ref (branch, tag, SHA).'
+    description: 'Override CascadeGuard version (git ref, tag, or SHA). If empty, reads from .cascadeguard.yaml cli.version, then falls back to built-in default.'
     required: false
-    default: 'f6bec7375eb54896b0c43fb053ee60942db2f136'  # cascadeguard/cascadeguard@main
+    default: ''
   python-version:
     description: 'Python version to use.'
     required: false
@@ -32,11 +32,33 @@ runs:
       id: install
       shell: bash
       env:
-        CG_VERSION: ${{ inputs.version }}
+        CG_VERSION_INPUT: ${{ inputs.version }}
       run: |
         set -euo pipefail
+
+        # Built-in default (updated when actions repo is released)
+        DEFAULT_VERSION="cfb9943c7cb5cb6e4f80954cd261f7ff466f08b0"
+
+        # Priority: input > .cascadeguard.yaml > default
+        VERSION="${CG_VERSION_INPUT}"
+
+        if [ -z "$VERSION" ] && [ -f .cascadeguard.yaml ]; then
+          VERSION=$(python3 -c "
+        import yaml, sys
+        try:
+            with open('.cascadeguard.yaml') as f:
+                cfg = yaml.safe_load(f) or {}
+            v = cfg.get('cli', {}).get('version', '') if isinstance(cfg.get('cli'), dict) else ''
+            print(v)
+        except Exception:
+            print('')
+        " 2>/dev/null)
+        fi
+
+        VERSION="${VERSION:-$DEFAULT_VERSION}"
+
         pip install --quiet \
-          "git+https://github.com/cascadeguard/cascadeguard.git@${CG_VERSION}#subdirectory=app"
-        echo "version=${CG_VERSION}" >> "$GITHUB_OUTPUT"
-        echo "Installed CascadeGuard CLI (ref: ${CG_VERSION})"
+          "git+https://github.com/cascadeguard/cascadeguard.git@${VERSION}#subdirectory=app"
+        echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+        echo "Installed CascadeGuard CLI (ref: ${VERSION})"
         cascadeguard --help > /dev/null 2>&1 && echo "CLI verified." || echo "::warning::CLI not on PATH"
