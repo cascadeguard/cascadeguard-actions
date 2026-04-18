@@ -43,6 +43,7 @@ runs:
         VERSION="${CG_VERSION_INPUT}"
 
         if [ -z "$VERSION" ] && [ -f .cascadeguard.yaml ]; then
+          pip install --quiet pyyaml
           VERSION=$(python3 -c "
         import yaml, sys
         try:
