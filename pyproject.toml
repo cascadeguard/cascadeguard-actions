@@ -20,5 +20,5 @@ python_functions = ["test_*"]
 addopts = "-v --tb=short"
 
 [build-system]
-requires = ["setuptools>=45"]
+requires = ["setuptools>=82.0.1"]
 build-backend = "setuptools.build_meta"
