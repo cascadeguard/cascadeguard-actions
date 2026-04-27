@@ -157,7 +157,7 @@ jobs:
 
       # ── Scan ────────────────────────────────────────────────────
       - name: Install Grype
-        uses: cascadeguard/cascadeguard-actions/setup-grype@d618b14ba0316b803ea98c1808d5b6392c97d5e1 # CAS-94
+        uses: cascadeguard/cascadeguard-actions/setup-grype@510b0009b78df3114345cb907db6b026da79d7ab # CAS-94
         with:
           version: ${{ inputs.grype-version }}
 
@@ -175,7 +175,7 @@ jobs:
 
       # ── SBOM ────────────────────────────────────────────────────
       - name: Install Syft
-        uses: cascadeguard/cascadeguard-actions/setup-syft@d618b14ba0316b803ea98c1808d5b6392c97d5e1 # CAS-94
+        uses: cascadeguard/cascadeguard-actions/setup-syft@510b0009b78df3114345cb907db6b026da79d7ab # CAS-94
         with:
           version: ${{ inputs.syft-version }}
 
