@@ -1,0 +1,103 @@
+# CascadeGuard — Reusable Dry-Run Check Workflow
+#
+# Validates enrolled images on every pull request without persisting state.
+# Runs cascadeguard images check --dry-run so no commits or PRs are opened.
+#
+# Exit behaviour:
+#   0 — all images up to date → job passes
+#   2 — drift detected (updates available) → job fails with actionable message
+#   1 — CLI error → job fails
+#
+# Typical usage in a consumer repo's PR workflow:
+#
+#   jobs:
+#     cascadeguard-dry-run:
+#       uses: cascadeguard/cascadeguard-actions/.github/workflows/check-dry-run.yaml@main
+#       secrets: inherit
+#
+# To scope to a subset of images:
+#
+#   jobs:
+#     cascadeguard-dry-run:
+#       uses: cascadeguard/cascadeguard-actions/.github/workflows/check-dry-run.yaml@main
+#       with:
+#         images: "nginx,redis"
+#       secrets: inherit
+
+name: Check (Dry Run)
+
+on:
+  workflow_call:
+    inputs:
+      images:
+        description: >
+          Comma-separated list of image names to scope the check
+          (e.g. "nginx,redis"). Checks all enrolled images if omitted.
+        type: string
+        required: false
+        default: ""
+      format:
+        description: "Output format: table or json"
+        type: string
+        required: false
+        default: "table"
+    outputs:
+      has-drift:
+        description: "'true' if any enrolled images have updates available"
+        value: ${{ jobs.dry-run-check.outputs.has-drift }}
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  dry-run-check:
+    name: Dry-run check
+    runs-on: ubuntu-latest
+    outputs:
+      has-drift: ${{ steps.check.outputs.has-drift }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Set up CascadeGuard CLI
+        uses: cascadeguard/cascadeguard-actions/setup-cascadeguard@main
+
+      - name: Run cascadeguard images check --dry-run
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          CG_FORMAT: ${{ inputs.format }}
+          CG_IMAGES: ${{ inputs.images }}
+        run: |
+          set -euo pipefail
+
+          ARGS=(--dry-run --format "$CG_FORMAT")
+
+          if [ -n "$CG_IMAGES" ]; then
+            ARGS+=(--images "$CG_IMAGES")
+          fi
+
+          set +e
+          cascadeguard images check "${ARGS[@]}"
+          RC=$?
+          set -e
+
+          case "$RC" in
+            0)
+              echo "has-drift=false" >> "$GITHUB_OUTPUT"
+              echo "All enrolled images are up to date."
+              ;;
+            2)
+              echo "has-drift=true" >> "$GITHUB_OUTPUT"
+              echo "::error title=CascadeGuard drift detected::One or more images have updates available. Run \`cascadeguard images check\` via the scheduled workflow or locally to apply updates."
+              exit 1
+              ;;
+            *)
+              echo "has-drift=false" >> "$GITHUB_OUTPUT"
+              echo "::error title=CascadeGuard check failed::CLI exited with code $RC. Check the logs above for details."
+              exit 1
+              ;;
+          esac
