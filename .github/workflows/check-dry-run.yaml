@@ -69,13 +69,15 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          CG_FORMAT: ${{ inputs.format }}
+          CG_IMAGES: ${{ inputs.images }}
         run: |
           set -euo pipefail
 
-          ARGS=(--dry-run --format "${{ inputs.format }}")
+          ARGS=(--dry-run --format "$CG_FORMAT")
 
-          if [ -n "${{ inputs.images }}" ]; then
-            ARGS+=(--images "${{ inputs.images }}")
+          if [ -n "$CG_IMAGES" ]; then
+            ARGS+=(--images "$CG_IMAGES")
           fi
 
           set +e
