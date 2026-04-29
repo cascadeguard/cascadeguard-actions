@@ -1,7 +1,7 @@
 # CascadeGuard — Reusable Dry-Run Check Workflow
 #
 # Validates enrolled images on every pull request without persisting state.
-# Runs cascadeguard images check --dry-run so no commits or PRs are opened.
+# Runs cascadeguard images check --no-commit so no commits or PRs are opened.
 #
 # Exit behaviour:
 #   0 — all images up to date → job passes
@@ -63,7 +63,7 @@ jobs:
       - name: Set up CascadeGuard CLI
         uses: cascadeguard/cascadeguard-actions/setup-cascadeguard@main
 
-      - name: Run cascadeguard images check --dry-run
+      - name: Run cascadeguard images check --no-commit
         id: check
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -74,10 +74,10 @@ jobs:
         run: |
           set -euo pipefail
 
-          ARGS=(--dry-run --format "$CG_FORMAT")
+          ARGS=(--no-commit --format "$CG_FORMAT")
 
           if [ -n "$CG_IMAGES" ]; then
-            ARGS+=(--images "$CG_IMAGES")
+            ARGS+=(--image "$CG_IMAGES")
           fi
 
           set +e
