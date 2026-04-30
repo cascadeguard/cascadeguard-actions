@@ -41,6 +41,14 @@ on:
         type: string
         required: false
         default: "table"
+      force:
+        description: >
+          Bypass the upstream-tag state cache — treat all current tags as unseen
+          so the check always produces output even when state is up to date.
+          Use for fallback/baseline runs where you want verified output, not silence.
+        type: boolean
+        required: false
+        default: false
     outputs:
       has-drift:
         description: "'true' if any enrolled images have updates available"
@@ -71,6 +79,7 @@ jobs:
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
           CG_FORMAT: ${{ inputs.format }}
           CG_IMAGES: ${{ inputs.images }}
+          CG_FORCE: ${{ inputs.force }}
         run: |
           set -euo pipefail
 
@@ -78,6 +87,10 @@ jobs:
 
           if [ -n "$CG_IMAGES" ]; then
             ARGS+=(--image "$CG_IMAGES")
+          fi
+
+          if [ "$CG_FORCE" = "true" ]; then
+            ARGS+=(--force-check)
           fi
 
           set +e
