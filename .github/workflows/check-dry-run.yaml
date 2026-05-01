@@ -41,6 +41,13 @@ on:
         type: string
         required: false
         default: "table"
+      fail-on-drift:
+        description: >
+          Whether to fail the job when upstream drift is detected (RC=2).
+          Set to false for baseline/fallback runs where drift is informational only.
+        type: boolean
+        required: false
+        default: true
     outputs:
       has-drift:
         description: "'true' if any enrolled images have updates available"
@@ -71,13 +78,18 @@ jobs:
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
           CG_FORMAT: ${{ inputs.format }}
           CG_IMAGES: ${{ inputs.images }}
+          CG_FAIL_ON_DRIFT: ${{ inputs.fail-on-drift }}
         run: |
           set -euo pipefail
 
           ARGS=(--no-commit --format "$CG_FORMAT")
 
           if [ -n "$CG_IMAGES" ]; then
-            ARGS+=(--image "$CG_IMAGES")
+            IFS=',' read -ra _IMGS <<< "$CG_IMAGES"
+            for _img in "${_IMGS[@]}"; do
+              _img="${_img// /}"
+              [ -n "$_img" ] && ARGS+=(--image "$_img")
+            done
           fi
 
           set +e
@@ -92,8 +104,12 @@ jobs:
               ;;
             2)
               echo "has-drift=true" >> "$GITHUB_OUTPUT"
-              echo "::error title=CascadeGuard drift detected::One or more images have updates available. Run \`cascadeguard images check\` via the scheduled workflow or locally to apply updates."
-              exit 1
+              if [ "$CG_FAIL_ON_DRIFT" = "false" ]; then
+                echo "::warning title=CascadeGuard drift detected::One or more images have updates available (not failing — baseline run)."
+              else
+                echo "::error title=CascadeGuard drift detected::One or more images have updates available. Run \`cascadeguard images check\` via the scheduled workflow or locally to apply updates."
+                exit 1
+              fi
               ;;
             *)
               echo "has-drift=false" >> "$GITHUB_OUTPUT"
