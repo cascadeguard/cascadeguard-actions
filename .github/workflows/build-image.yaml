@@ -83,7 +83,7 @@ jobs:
 
       # ── Scanning ─────────────────────────────────────────────────
       - name: Install Grype
-        uses: cascadeguard/cascadeguard-actions/setup-grype@d618b14ba0316b803ea98c1808d5b6392c97d5e1 # CAS-94
+        uses: cascadeguard/cascadeguard-actions/setup-grype@23b32fea1e1f1992faea9e978e9741810bf3ebac # CAS-94
         with:
           version: v0.110.0
 
@@ -99,7 +99,7 @@ jobs:
 
       - name: Upload Grype SARIF results
         if: always()
-        uses: github/codeql-action/upload-sarif@c10b8064de6f491fea524254123dbe5e09572f13 # v4
+        uses: github/codeql-action/upload-sarif@e46ed2cbd01164d986452f91f178727624ae40d7 # v4
         with:
           sarif_file: grype-results.sarif
           category: grype-${{ inputs.image_name }}
@@ -107,7 +107,7 @@ jobs:
 
       # ── Trivy (secondary scanner) ────────────────────────────────
       - name: Run Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # master
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # master
         with:
           image-ref: ${{ steps.meta.outputs.full_image }}
           format: json
@@ -144,7 +144,7 @@ jobs:
 
       # ── SBOM Generation ──────────────────────────────────────────
       - name: Install Syft
-        uses: cascadeguard/cascadeguard-actions/setup-syft@d618b14ba0316b803ea98c1808d5b6392c97d5e1 # CAS-94
+        uses: cascadeguard/cascadeguard-actions/setup-syft@23b32fea1e1f1992faea9e978e9741810bf3ebac # CAS-94
         with:
           version: v1.42.3
 
