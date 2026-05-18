@@ -157,7 +157,7 @@ jobs:
 
       # ── Scan ────────────────────────────────────────────────────
       - name: Install Grype
-        uses: cascadeguard/cascadeguard-actions/setup-grype@d618b14ba0316b803ea98c1808d5b6392c97d5e1 # CAS-94
+        uses: cascadeguard/cascadeguard-actions/setup-grype@0f21d76b9d6c6d62ca756d02f512e267591a5336 # CAS-94
         with:
           version: ${{ inputs.grype-version }}
 
@@ -175,7 +175,7 @@ jobs:
 
       # ── SBOM ────────────────────────────────────────────────────
       - name: Install Syft
-        uses: cascadeguard/cascadeguard-actions/setup-syft@d618b14ba0316b803ea98c1808d5b6392c97d5e1 # CAS-94
+        uses: cascadeguard/cascadeguard-actions/setup-syft@0f21d76b9d6c6d62ca756d02f512e267591a5336 # CAS-94
         with:
           version: ${{ inputs.syft-version }}
 
@@ -187,7 +187,7 @@ jobs:
 
       # ── Sign ────────────────────────────────────────────────────
       - name: Install Cosign
-        uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
 
       - name: Sign image and attach SBOM attestation
         env:
