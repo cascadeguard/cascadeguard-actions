@@ -42,14 +42,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4
 
       - name: Log in to GitHub Container Registry
         if: inputs.push_and_sign
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -68,7 +68,7 @@ jobs:
           fi
 
       - name: Build image
-        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
         with:
           context: ${{ inputs.image_path }}
           file: ${{ inputs.image_path }}/Dockerfile
@@ -83,7 +83,7 @@ jobs:
 
       # ── Scanning ─────────────────────────────────────────────────
       - name: Install Grype
-        uses: cascadeguard/cascadeguard-actions/setup-grype@d618b14ba0316b803ea98c1808d5b6392c97d5e1 # CAS-94
+        uses: cascadeguard/cascadeguard-actions/setup-grype@0f21d76b9d6c6d62ca756d02f512e267591a5336 # CAS-94
         with:
           version: v0.110.0
 
@@ -99,7 +99,7 @@ jobs:
 
       - name: Upload Grype SARIF results
         if: always()
-        uses: github/codeql-action/upload-sarif@c10b8064de6f491fea524254123dbe5e09572f13 # v4
+        uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4
         with:
           sarif_file: grype-results.sarif
           category: grype-${{ inputs.image_name }}
@@ -107,7 +107,7 @@ jobs:
 
       # ── Trivy (secondary scanner) ────────────────────────────────
       - name: Run Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # master
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # master
         with:
           image-ref: ${{ steps.meta.outputs.full_image }}
           format: json
@@ -144,7 +144,7 @@ jobs:
 
       # ── SBOM Generation ──────────────────────────────────────────
       - name: Install Syft
-        uses: cascadeguard/cascadeguard-actions/setup-syft@d618b14ba0316b803ea98c1808d5b6392c97d5e1 # CAS-94
+        uses: cascadeguard/cascadeguard-actions/setup-syft@0f21d76b9d6c6d62ca756d02f512e267591a5336 # CAS-94
         with:
           version: v1.42.3
 
@@ -180,7 +180,7 @@ jobs:
       # ── Sign & Push ──────────────────────────────────────────────
       - name: Install Cosign
         if: inputs.push_and_sign
-        uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
 
       - name: Push image
         id: push
