@@ -28,7 +28,7 @@ jobs:
 
     steps:
       - name: Checkout release tag
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: ${{ github.event.release.tag_name }}
 
@@ -55,7 +55,7 @@ jobs:
 
       # Install cosign for keyless Sigstore signing
       - name: Install cosign
-        uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
 
       - name: Sign SBOM files with cosign (keyless / OIDC)
         run: |
@@ -84,7 +84,7 @@ jobs:
 
       # GitHub-native artifact attestation (SLSA provenance via Sigstore)
       - name: Generate GitHub artifact attestation for SBOMs
-        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
         with:
           subject-path: |
             sbom.spdx.json
