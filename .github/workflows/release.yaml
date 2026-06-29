@@ -56,7 +56,7 @@ jobs:
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
 
       - name: Generate release matrix from images.yaml
         id: matrix
@@ -91,13 +91,13 @@ jobs:
       matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4
 
       - name: Set up QEMU for multi-platform builds
-        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4
+        uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3 # v4
 
       # ── Registry Authentication ──────────────────────────────────
       - name: Derive GHCR registry from image prefix
@@ -108,14 +108,14 @@ jobs:
           echo "ghcr=$GHCR_REGISTRY" >> "$GITHUB_OUTPUT"
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4
         with:
           registry: ${{ steps.registries.outputs.ghcr }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4
         with:
           registry: docker.io
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -135,7 +135,7 @@ jobs:
       # ── Build Multi-Platform Images ─────────────────────────────
       - name: Build and push image
         id: build
-        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.context }}/Dockerfile
@@ -157,7 +157,7 @@ jobs:
 
       # ── Scan ────────────────────────────────────────────────────
       - name: Install Grype
-        uses: cascadeguard/cascadeguard-actions/setup-grype@d618b14ba0316b803ea98c1808d5b6392c97d5e1 # CAS-94
+        uses: cascadeguard/cascadeguard-actions/setup-grype@0f21d76b9d6c6d62ca756d02f512e267591a5336 # CAS-94
         with:
           version: ${{ inputs.grype-version }}
 
@@ -175,7 +175,7 @@ jobs:
 
       # ── SBOM ────────────────────────────────────────────────────
       - name: Install Syft
-        uses: cascadeguard/cascadeguard-actions/setup-syft@d618b14ba0316b803ea98c1808d5b6392c97d5e1 # CAS-94
+        uses: cascadeguard/cascadeguard-actions/setup-syft@0f21d76b9d6c6d62ca756d02f512e267591a5336 # CAS-94
         with:
           version: ${{ inputs.syft-version }}
 
@@ -187,7 +187,7 @@ jobs:
 
       # ── Sign ────────────────────────────────────────────────────
       - name: Install Cosign
-        uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
 
       - name: Sign image and attach SBOM attestation
         env:
@@ -218,7 +218,7 @@ jobs:
             "${{ inputs.image-prefix-dockerhub }}/${{ matrix.name }}:${{ matrix.tag }}"
 
       - name: Generate SLSA provenance attestation
-        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
         with:
           subject-name: ${{ inputs.image-prefix-ghcr }}/${{ matrix.name }}
           subject-digest: ${{ steps.build.outputs.digest }}
@@ -242,7 +242,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
 
       - name: Download all SBOM artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
@@ -316,7 +316,7 @@ jobs:
           IMAGE_PREFIX_DOCKERHUB: ${{ inputs.image-prefix-dockerhub }}
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v2
+        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v2
         with:
           generate_release_notes: true
           files: |
